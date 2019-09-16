@@ -1,0 +1,30 @@
+{
+  "1": "https://www.bleepingcomputer.com/feed/",
+  "2": "https://www.riskiq.com/feed/",
+  "3": "https://krebsonsecurity.com/feed/",
+  "4": "https://usa.kaspersky.com/blog/feed/",
+  "5": "https://research.checkpoint.com/feed/",
+  "6": "https://blog.malwarebytes.com/feed/",
+  "7": "http://feeds.trendmicro.com/TrendMicroSimplySecurity",
+  "8": "http://feeds.feedburner.com/fortinet/blog/threat-research",
+  "9": "https://securityboulevard.com/feed/",
+  "10": "https://blog.zimperium.com/feed/",
+  "11": "https://www.darkreading.com/rss_simple.asp",
+  "12": "https://threatpost.com/feed/",
+  "13": "https://www.cyberscoop.com/feed/",
+  "14": "http://feeds.feedburner.com/Torrentfreak",
+  "15": "https://www.digitaltrends.com/feed/",
+  "16": "https://www.us-cert.gov/ncas/analysis-reports.xml",
+  "17": "https://blog.comodo.com/feed/",
+  "18": "https://hackercombat.com/feed/",
+  "19": "https://www.itsecurityguru.org/feed/",
+  "20": "https://computerfraud.us/feed",
+  "21": "https://www.tradesecretslaw.com/feed/",
+  "22": "https://blog.avast.com/rss.xml",
+<<<<<<< HEAD
+  "23": "https://www.fbi.gov/feeds/cyber-crimes-stories/RSS",
+  "1": "mike"
+=======
+  "23": "https://www.fbi.gov/feeds/cyber-crimes-stories/RSS"
+>>>>>>> 6c8790b744e3119150b90820a7700ef4e34acc99
+}
