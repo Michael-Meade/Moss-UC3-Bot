@@ -1,13 +1,7 @@
-<<<<<<< HEAD
+
 require "fileutils"
 require 'json'
-=======
->>>>>>> 6c8790b744e3119150b90820a7700ef4e34acc99
 class Utils
-	def self.create_dir(dir)
-		FileUtils.mkdir_p dir  unless File.exists?(dir)
-    end
-<<<<<<< HEAD
     def self.create_dir(dir_name)
 		FileUtils.mkdir_p(dir_name)  unless File.exists?(dir_name)
 	end
@@ -57,6 +51,4 @@ class Utils
 		f.write(JSON.pretty_generate(a))
 		f.close
 	end
-=======
->>>>>>> 6c8790b744e3119150b90820a7700ef4e34acc99
 end

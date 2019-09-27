@@ -2,8 +2,9 @@ require_relative 'lib/moss'
 require 'fileutils'
 require 'cgi'
 require 'discordrb'
-token = "MzgwNTgzNjk4NzkxMzk5NDI0.DO8_vQ.Vc84O0pjrQcGzDQAXeG7nBDtZqk"
-bot = Discordrb::Commands::CommandBot.new token: 'MzgwNTgzNjk4NzkxMzk5NDI0.DbhQgw.L2Bo05sL3dGMM1O0cVGRRbdEgMQ', client_id:  380583698791399424, prefix: '.'
+require 'json'
+token  "MzgwNTgzNjk4NzkxMzk5NDI0.XX8NMQ.IiPEe67uGDbH4pA0yKAi-Mjcnp4"
+bot = Discordrb::Commands::CommandBot.new token: 'MzgwNTgzNjk4NzkxMzk5NDI0.XX8NMQ.IiPEe67uGDbH4pA0yKAi-Mjcnp4', client_id:  380583698791399424, prefix: '.'
 bot.command(:sha1, min_args:1) do |event, sha1|
 	encode = Encode.encode_sha1(sha1)
 	event.respond(encode)
@@ -11,6 +12,24 @@ end
 bot.command(:domainexist) do |event, domain|
 	d = Fun.domain_exist(domain)
 	event.respond("Available: #{d["available"]}"  "\n\n" + "Registered #{d["registered"]}")
+end
+bot.command(:manpage, min_args:1) do |event, man|
+	message = event.message.to_s.gsub(".manpage ", "")
+	page = ManPage.get_results(message).shift
+	p page
+	event.channel.send_embed(" ") do |embed|
+  		embed.title = page["name"]
+  		embed.add_field(name: "Description", value: "#{page["description"]}")
+	end
+end 
+bot.command(:events) do |event|
+	event.respond(News.events.to_s)
+end
+bot.command(:manexplain, min_args:1) do |event, man|
+	message = event.message.to_s.gsub(".manexplain ", "")
+	page    = ManPage.explain(message)
+	p page
+	event.respond(page)
 end
 bot.command(:md5, min_args:1) do |event, md5|
 	encode = Encode.encode_md5(md5)
@@ -41,10 +60,34 @@ bot.command(:unhex, min_args:1) do |event, unhex|
 	event.respond(Encode.hex_decode(unhex))
 end
 bot.command(:ceaser, min_args:1) do |event, ceaser, shift|
-	event.respond(Encode.caesar_cipher(ceaser, shift=1).shift.to_s)
+	event.respond(Encode.caesar_cipher(ceaser, shift=1).join)
 end
 bot.command(:reverse, min_args:1) do |event, text|
 	event.respond(Encode.reverse_string(text))
+end
+bot.command(:ctf2) do |event|
+	ctf = CTF_Crypto.generate_xor(event.user.id)
+	event.respond(ctf["Key"])
+end
+bot.command(:add, min_args:1, description:"add a link yo your playlist", usage:".add <song url>") do |event, value|
+	YouTube.add_playlist(event.user.id, value)
+end
+bot.command(:ctfceaser) do |event|
+	ctf = CTF_Crypto.ceaserEasy(event.user.id)
+	puts ctf
+	event.respond(ctf["ceaser"])
+end
+bot.command(:checkxor) do |event, check|
+	check = CTF_Crypto.check_xor(event.user.id, check)
+	if check == true
+		event.respond("YAY... you got it :)")
+	elsif check == false
+		event.respond("sorry dude. its not right")
+	end
+end
+bot.command(:playlist) do |event|
+	r  = YouTube.read_playlist(event.user.id)
+	event.respond(r.to_s)
 end
 bot.command(:encodexor, min_args:2) do |event, key, msg|
 	event.respond(Encode.xor(key, msg).to_s)
@@ -52,11 +95,8 @@ end
 bot.command(:length, min_args:1) do |event, text|
 	event.respond(Encode.string_length(text))
 end
-bot.command(:bee) do |event|
-	event.respond(":ghost: :bee:")
-end
 bot.command(:iplook) do |event, q|
-	s = Searching.iplook(q)
+	s = Search.ip_lookup(q) 
 	event.channel.send_embed(" ") do |embed|
   		#embed.title = s['ip']
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://ipgeolocation.io/static/flags/us_64.png")
@@ -72,7 +112,6 @@ bot.command(:iplook) do |event, q|
   		embed.add_field(name: "TimeZone",	    value: s['time_zone']['name'])
 	end
 end
-
 bot.command(:weed) do |event, s, num|
 	if num.nil?
 		number = 0
@@ -98,11 +137,9 @@ end
 bot.command(:rot13, min_args:1) do |event, shift, text|
 	event.respond(Encode.encode_rot13(text, shift=13))
 end
-bot.command(:man) do |event, term|
-	event.respond "http://man.he.net/?topic=" + term.to_s + "&section=all"
-end
 bot.command(:who_is, min_args: 1) do |event, domain|
-	s = Searching.who(domain)
+	s = Search.whois(domain)
+	puts s
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "#{domain}"
   		embed.add_field(name: "Status", value: "#{s['status']}")
@@ -121,7 +158,7 @@ bot.command(:who_is, min_args: 1) do |event, domain|
 end
 
 bot.command(:xmr) do |event|
-	xmr = Crypto.xmr
+	xmr = Crypto.get_crypt("monero")
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "XMR price"
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://www.getmonero.org/press-kit/symbols/monero-symbol-1280.png")
@@ -133,7 +170,7 @@ bot.command(:xmr) do |event|
 	end
 end
 bot.command(:rvn) do |event|
-	eth = Crypto.eth
+	eth = Crypto.get_crypt("ravencoin")
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "RVN price"
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"http://static1.squarespace.com/static/5b4ea0804eddec73df84179c/t/5b4ea76803ce64a010ea5c26/1531881323382/ravencoin.png")
@@ -145,7 +182,7 @@ bot.command(:rvn) do |event|
 	end
 end
 bot.command(:eth) do |event|
-	eth = Crypto.eth
+	eth = Crypto.get_crypt("ethereum")
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "ETH price"
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://etherscan.io/images/ethereum-icon.png")
@@ -157,7 +194,7 @@ bot.command(:eth) do |event|
 	end
 end
 bot.command(:xlm) do |event|
-	xlm = Crypto.xlm
+	xlm = Crypto.get_crypt("stellar")
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "XLM price"
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://upload.wikimedia.org/wikipedia/commons/5/56/Stellar_Symbol.png")
@@ -173,7 +210,7 @@ bot.command(:btc2usd) do |event, price|
 	event.respond(money)
 end
 bot.command(:btc) do |event|
-	xmr = Crypto.btc
+	xmr = Crypto.get_crypt("bitcoin")
 	event.channel.send_embed(" ") do |embed|
   		embed.title = "BTC price"
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png")
@@ -184,12 +221,12 @@ bot.command(:btc) do |event|
   		embed.add_field(name: "Percent change 24 hrs", value: "#{xmr["percent_change_24"]} %")
 	end
 end
-bot.command(:upload) do |event, url, name|
+bot.command(:upload, min_args:2, description:"Upload files to your meme folder. Only you will be able to use it. ", usage:".upload url name ") do |event, url, name|
 	Upload.add_file(event.user.id.to_s, url, name)
 end
 bot.command(:btcaddy, min_args: 2, usage: ".btcaddy <address> usd OR btc") do |event, addy, num|
 	if num.downcase == "usd"
-		btc = Crypto.getbtc_usd(addy)
+		btc = Crypto.get_address_usd("rawaddr", addy)
 		event.channel.send_embed(" ") do |embed|
 	  		embed.title = addy
 	  		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png")
@@ -201,7 +238,7 @@ bot.command(:btcaddy, min_args: 2, usage: ".btcaddy <address> usd OR btc") do |e
 	  		embed.add_field(name: "Transactions", value: "#{btc["n_tx"]}")
 		end
 	elsif num.downcase == "btc"
-		btc = Crypto.getbtc(addy)
+		btc = Crypto.get_address_btc("rawaddr", addy)
 		event.channel.send_embed(" ") do |embed|
 	  		embed.title = addy
 	  		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url:"https://en.bitcoin.it/w/images/en/2/29/BC_Logo_.png")
@@ -217,24 +254,18 @@ bot.command(:btcaddy, min_args: 2, usage: ".btcaddy <address> usd OR btc") do |e
 	end
 end
 bot.command(:btcwallet) do |event|
-	#event.user.id.to_s
 	begin
 		address = Crypto.generate_btc_address
 		event.user.send_file(File.open("wallets/" + address + ".txt"))
 		#event.send_file(File.open("wallets/" + address + ".txt"))
-		event.respond("check ur pms.... Btw: the file was deleted from vps.")
+		event.respond("check ur pms....")
 		begin
 			FileUtils.rm("wallets/#{address}.txt")
 		rescue => e
-			puts e
-			event.user.pm("Error with deleting wallet. Going old school. ")
-			#event.respond("Error with deleting wallet. Going old school. ")
 			system("rm -rf wallets/#{address}.txt")
 		end
 	rescue => e
 		puts e
-		#event.respond("Error with BTC wallet")
-		event.user.pm("Error with deleting wallet. Going old school. ")
 	end
 	nil
 end
@@ -254,28 +285,18 @@ end
 bot.command(:stab) do |event, user|
 	event.respond(Fun.stab_user(user, event.user.name.to_s))
 end
-bot.command(:del, min_args:1, usage: ".del user", description: "Delete your friends sys32") do |event, user|
+bot.command(:del, min_args:1, usage: ".del user", description: "Delete your friends sys32  file?") do |event, user|
 	event.respond(Fun.sys32(user, event.user.name.to_s))
 end
 bot.command(:ddos, min_args:1,  usage:".ddos user", description:"ddos your friend") do |event, user|
 	event.respond(Fun.ddos_user(user, event.user.name.to_s))
 end
-bot.command(:beerme) do |event, user|
+bot.command(:beerme, description:"give a friend a beer") do |event, user|
 	if user.nil?
 		user = event.user.name
 	end
 	event.respond(Fun.beer_user(user))
 	bot.send_file(event.channel.id, File.open('images/beer.gif', 'r'))
-end
-bot.command(:hppass) do |event|
-	pot = Searching.username
-	string = ""
-	i = 0
-	pot.each do |key, values|
-		string += i.to_s +  "] " + key  + "----------"  + values.to_s + "\n"
-		i+=1
-	end
-	event.respond("#{string}")
 end
 bot.command(:joint) do |event, user|
 	if user.nil?
@@ -285,6 +306,9 @@ bot.command(:joint) do |event, user|
 end
 bot.command(:deadpool) do |event|
 	bot.send_file(event.channel.id, File.open('images/dead.gif', 'r'))
+end
+bot.command(:handstand) do |event|
+	bot.send_file(event.channel.id, File.open('images/handstand0.gif', 'r'))
 end
 bot.command(:dab) do |event|
 	bot.send_file(event.channel.id, File.open('images/dab.gif', 'r'))
@@ -313,48 +337,84 @@ end
 bot.command(:cookie) do |event, user|
 	event.respond(Fun.give_cookie(user))
 end
-bot.command(:yt, min_args:1) do |event, q, value|
+bot.command(:yt, min_args:1, usage:".yt how to hack") do |event, q, value|
 	#puts Searching.youtube(q, value).to_s
-	event.respond(Searching.youtube(q, value).to_s)
+	q = event.message.to_s.split(".yt")[1]
+	event.respond(Search.search_youtube(q, value).to_s)
 end
 
-bot.command(:gif, min_args:1) do |event, q|
-	event.respond(Searching.gif_search(q))
+bot.command(:gif, min_args:1, usage:".gif epic fail") do |event, q|
+	q = event.message.to_s.split(".gif ")[1]
+	event.respond(Search.gif_tenor(q))
 end
-bot.command(:moviedb, min_args:1) do |event, *q|
-	
-	puts q
-	event.respond(Searching.moviedb(q)["Movie"].to_s)
+bot.command(:moviedb, min_args:1, usage:".moviedb office space") do |event, *q|
+	q = event.message.to_s.split(".moviedb ")[1]
+	event.respond(Search.open_moviedb(q)["Movie"].to_s)
 end
 bot.command(:w, min_args:1) do |event, q|
-	event.respond(Searching.weather(q))
+	event.respond(Search.weather(q))
 end
 bot.command(:wiki, min_args:1 ) do |event, q|
-	event.respond(Searching.wikia(q.to_s))
+	event.respond(Search.wikia(q.to_s))
 end
-bot.command(:u, min_args:1 ) do |event, q, value|
-	event.respond(Searching.urban(q, value=0))
+bot.command(:u, min_args:1, usage: ".u yeet", description:"Searches Urban dict" ) do |event, q, value|
+	q = event.message.to_s.split(".u ")[1]
+	event.respond(Search.urban_dict(q, value=0))
 end
 bot.command(:rand) do |event|
-	puts Meme.random.to_s
-	event.respond(Meme.random.to_s)
+	event.respond(Memes.pick_random.to_s)
 end
 bot.command(:source) do |event|
 	event.respond("https://github.com/Michael-Meade/Moss-UC3-Bot")
 end
 bot.command(:memecards) do |event|
-	event.respond(Meme.pic_easy("memecards"))
+	event.respond(Memes.pic_easy("memecards"))
 end
 bot.command(:uclinks) do |event|
 	event.channel.send_embed(" ") do |embed|
 		embed.add_field(name: "ResNet",          value:  "https://www.utica.edu/academic/iits/compuserservices/network/info.cfm")
 		embed.add_field(name: "Tickets",         value:  "https://uticatickets.universitytickets.com")
 		embed.add_field(name: "Software",        value:  "https://software.utica.edu")
+		embed.add_field(name: "Software download",  value:  "https://e5.onthehub.com/")
 		embed.add_field(name: "Pioneerplace",    value:  "http://pioneerplace.utica.edu")
 		embed.add_field(name: "Password",        value:  "https://password.utica.edu")
 		embed.add_field(name: "Engage",          value:  "http://engage.utica.edu")
 		embed.add_field(name: "BannerWeb",       value:  "http://bannerweb.utica.edu")
 		embed.add_field(name: "WebMail",         value:  "https://mail.google.com/a/utica.edu")
+	end
+end
+bot.command(:bee) do |event|
+	event.respond(":ghost: :bee:")
+end
+bot.command(:mineinfo) do |event|
+	rvn = Crypto.rvn_mining.shift
+	p rvn
+	event.channel.send(" ") do |embed|
+		embed.add_field(name: "Hashrate Avg",    value: rvn["hashrate_avg"].to_s)
+		embed.add_field(name: "Hashrate",        value: rvn["hashrate"].to_s)
+		embed.add_field(name: "Last Online",     value: Time.at(rvn["last_online"].to_s))
+	end
+end
+bot.command(:minervn) do |event|
+	rvn = Crypto.rvn_mine()
+	event.channel.send_embed(" ") do |embed|
+		embed.add_field(name: "Immature",          value:  rvn["immature"])
+		embed.add_field(name: "Mature",            value:  rvn["mature"])
+		embed.add_field(name: "Balance",           value:  rvn["balance"])
+		embed.add_field(name: "Queued",            value:  rvn["queued"])
+		embed.add_field(name: "Total Paid",        value:  rvn["total_paid"])
+	end
+end
+bot.command(:news, min_args:1, description: ".news ls || .new add <url>") do |event|
+	msg = event.message.to_s.split(".news ")[1]
+	if msg.numeric?
+		msg =  News.get_news(msg)
+		event.respond(msg["Title"] + "\n" + msg["Link"])
+	elsif msg.include?("add")
+		site = msg.to_s.split("add ")
+		News.add_site(site)
+	elsif msg.include?("ls")
+		News.create_list
 	end
 end
 bot.command(:ctf) do |event|
@@ -399,52 +459,55 @@ bot.command([:cryptohelp, :helpcrypt]) do |event|
 	event.respond("https://i.imgur.com/BEtevqu.png")
 end
 bot.command(:morning) do |event|
-	event.respond(Meme.pic_easy("morning"))
+	event.respond(Memes.pic_easy("morning"))
 end
 bot.command(:yolo) do |event|
-	event.respond(Meme.pic_easy("yolo"))
+	event.respond(Memes.pic_easy("yolo"))
 end
 bot.command(:tpb) do |event|
-	event.respond(Meme.pic_easy("tpb"))
+	event.respond(Memes.pic_easy("tpb"))
 end
 bot.command(:silicon) do |event|
-	event.respond(Meme.pic_easy("silicon"))
+	event.respond(Memes.pic_easy("silicon"))
 end
 bot.command(:cyber) do |event|
-	event.respond(Meme.pic_easy("cyber"))
+	event.respond(Memes.pic_easy("cyber"))
 end
 bot.command([:nou, :noyou]) do |event|
-	event.respond(Meme.pic_easy("no_you"))
+	event.respond(Memes.pic_easy("no_you"))
 end
 bot.command(:dope) do |event|
-	event.respond(Meme.pic_easy("dope"))
+	event.respond(Memes.pic_easy("dope"))
 end
 bot.command(:johncenta) do |event|
-	event.respond(Meme.pic_easy("johncenta"))
+	event.respond(Memes.pic_easy("johncenta"))
+end
+bot.command(:pic) do |event, value|
+	Upload.get_image(event.user.id.to_s, value)
 end
 bot.command(:dogs) do |event|
-	event.respond(Meme.pic_easy("dogs"))
+	event.respond(Memes.pic_easy("dogs"))
 end
 bot.command(:community) do |event|
-	event.respond(Meme.pic_easy("community"))
+	event.respond(Memes.pic_easy("community"))
 end
 bot.command(:spider) do |event|
-	event.respond(Meme.pic_easy("spider"))
+	event.respond(Memes.pic_easy("spider"))
 end
 bot.command(:simpsons) do |event|
-	event.respond(Meme.pic_easy("simpsons"))
+	event.respond(Memes.pic_easy("simpsons"))
 end
 bot.command(:scrubs) do |event|
-	event.respond(Meme.pic_easy("scrubs"))
+	event.respond(Memes.pic_easy("scrubs"))
 end
 bot.command(:office) do |event|
-	event.respond(Meme.pic_easy("office"))
+	event.respond(Memes.pic_easy("office"))
 end
 bot.command(:alert) do |event, price|
 	Alert.rvn_alert(event.user.id.to_s, price)
 end
 bot.command(:itcrowd) do |event|
-	event.respond(Meme.pic_easy("itcrowd"))
+	event.respond(Memes.pic_easy("itcrowd"))
 end
 bot.command(:hackerman) do |event|
 	event.respond("https://i.imgur.com/kx8y308.mp4")
@@ -457,35 +520,42 @@ bot.command(:yup) do |event|
 end
 
 bot.command(:pepe) do |event|
-	event.respond(Meme.pepe.to_s)
+	event.respond(Memes.pepe.to_s)
 end
 bot.command(:ig) do |event, uname|
-	User_Info.ig(event.user.id.to_s, uname)
+	User.add_custom("IG", uname, event.user.id)
+	#User.add_ig(event.user.id.to_s, uname)
 end
-bot.command(:snap) do |event, snap|
-	User_Info.snap_chat(event.user.id.to_s, snap)
+bot.command(:snap, usage: ".snap username", description: ".snap username") do |event, snap|
+	User.add_custom("Snap", snap, event.user.id.to_s)
+	#User.add_snapchat(event.user.id.to_s, snap)
 end
-bot.command(:email) do |event, email|
-	User_Info.school_email(event.user.id.to_s, email)
+bot.command(:email, usage: ".email mameade@utica.edu", description: "adds your number to your profile") do |event, email|
+	User.add_custom("Email", email, event.user.id.to_s)
+	#User.school_email(event.user.id.to_s, email)
 end
-bot.command(:number) do |event, number|
-	User_Info.phone_number(event.user.id.to_s, number)
+bot.command(:number, usage: ".number 911", description: "add your number to your profile") do |event, number|
+	#User.add_number(event.user.id.to_s, number)
+	User.add_custom("Number", number, event.user.id.to_s)
 end
 bot.command(:lookup) do |event, user|
-	User_Info.look_up(event.user.id.to_s, user)
+	User.look_up(event.user.id.to_s, user)
 end
 bot.command(:afbi) do |event|
 	puts
 end
-bot.command(:alias) do |event, user, aliass|
-	if not event.message.mentions.at(0).id.nil?
-		uid = event.message.mentions.at(0).id
-		User_Info.alias_add(uid.to_s, aliass)
+bot.command(:alias, usage:".alias <alias> <user>") do |event, aliass, user|
+	if user.nil?
+		user = event.user.id
 	end
-	User_Info.alias_add(event.user.id.to_s, aliass)
-end
+		if not event.message.mentions.at(0).id.nil?
+			uid = event.message.mentions.at(0).id
+			User.add_alias(uid.to_s, aliass)
+		end
+		#User.add_alias(event.user.id.to_s, aliass)
+	end
 bot.command(:test) do |event, user|
-	puts User_Info.getidbyalias("0", "mc")
+	puts User.getidbyalias("0", "mc")
 	nil
 end
 bot.command(:bc) do |event|
@@ -510,9 +580,21 @@ bot.command(:riskiq) do |event|
   		embed.timestamp = Time.at(1558302217)
 	end
 end
+bot.command(:todo) do |event|
+	q = event.message.to_s.gsub(".todo ", "")
+	FixList.add(q)
+end
+bot.command(:lstodo) do |event|
+	string = Utils.create_list("fix/315264930951462913.json")
+	event.respond(string.to_s)
+end
+bot.command(:rmtodo) do |event|
+	q = event.message.to_s.gsub(".rmtodo ", "")
+	FixList.remove(q)
+end
 bot.command(:yify) do |event, q|
-	q = Searching.yify(q).to_s
-	puts q
+	q = Search.yify(q)
+	puts q["Summary"]
 	event.channel.send_embed(" ") do |embed|
   		embed.title = q['Title']
   		embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: q['pic'])
@@ -523,11 +605,8 @@ bot.command(:yify) do |event, q|
 	  	embed.add_field(name: "Genre", 		value: q['Genre'])
 	  	embed.add_field(name: "Summary",    value: q['Summary'])
 	  	embed.add_field(name: "Torrent",    value: q['Torrent'])
-	  	embed.add_field(name: "Quality",    value: q['Quality'])
-	  	embed.add_field(name: "Seeds",    	value: q['Seeds'])
-	  	embed.add_field(name: "Peers",    	value: q['Peers'])
-	  	embed.add_field(name: "Size",    	value: q['Size'])
 	end
+	nil
 end
 bot.command(:krebs) do |event|
 	krebs = NewsTest.cyber_news("3")
@@ -733,26 +812,29 @@ bot.command(:avast) do |event|
   		embed.timestamp = Time.at(1558302217)
 	end
 end
-bot.command(:addmeme) do |event, id, link|
-	event.respond(Meme.get_file(id.to_s, link.to_s)["Status"].gsub("memes/", ""))
+bot.command(:boom) do |event|
+	event.respond(Memes.pic_easy("boom"))
 end
-bot.command(:lsmeme) do |event|
-	event.respond(Meme.dir_list)
+bot.command(:addmeme) do |event, id, link |
+	event.respond(Memes.get_file(id.to_s, link.to_s)["Status"].gsub("memes/", ""))
+end
+bot.command(:lsmeme, description:"list  memes", usage:".lsmeme") do |event|
+	event.respond(Memes.list_dir)
 end
 bot.command(:ucsoft) do |event|
 	event.respond("https://software.utica.edu")
 end
 bot.command(:whois) do |event, user|
 	if user == "me"
-		a = User_Info.read_file(event.user.id.to_s)
+		a = User.read_file(event.user.id)
 		string = ""
 		a.keys.each do |x|
 			string += "#{x}: ***#{a[x].to_s}***\n\n".to_s
 		end
 		event.respond(string)
 	else
-		uname = User_Info.getidbyalias("0", user)
-		a = User_Info.read_file(uname)
+		uname = User.get_id_alias(user)
+		a = User.read_file(uname)
 		string = ""
 		a.keys.each do |x|
 			string += "#{x}: #{a[x].to_s}\n\n".to_s
@@ -760,7 +842,5 @@ bot.command(:whois) do |event, user|
 		event.respond(string)
 	end
 end
-bot.command(:add) do |event, value, value2|
-	User_Info.custom(event.user.id.to_s, value, value2)
-end
-bot.run        
+
+bot.run
