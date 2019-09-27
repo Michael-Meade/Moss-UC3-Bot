@@ -3,8 +3,8 @@ require 'fileutils'
 require 'cgi'
 require 'discordrb'
 require 'json'
-token  "MzgwNTgzNjk4NzkxMzk5NDI0.XX8NMQ.IiPEe67uGDbH4pA0yKAi-Mjcnp4"
-bot = Discordrb::Commands::CommandBot.new token: 'MzgwNTgzNjk4NzkxMzk5NDI0.XX8NMQ.IiPEe67uGDbH4pA0yKAi-Mjcnp4', client_id:  380583698791399424, prefix: '.'
+token = "MzgwNTgzNjk4NzkxMzk5NDI0.XY5NtA.UelDey_DRGYxt3i-r3urMepJDAY"
+bot = Discordrb::Commands::CommandBot.new token: 'MzgwNTgzNjk4NzkxMzk5NDI0.XY5NtA.UelDey_DRGYxt3i-r3urMepJDAY', client_id:  380583698791399424, prefix: '.'
 bot.command(:sha1, min_args:1) do |event, sha1|
 	encode = Encode.encode_sha1(sha1)
 	event.respond(encode)
